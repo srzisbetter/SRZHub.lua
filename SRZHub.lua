@@ -61,14 +61,12 @@ ContentFrame.Size = UDim2.new(1, -100, 1, -30)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(0, 110, 120)
 ContentFrame.BorderSizePixel = 0
 
--- Clear content function
 local function clearContent()
 	for _, v in pairs(ContentFrame:GetChildren()) do
 		if v:IsA("GuiObject") then v:Destroy() end
 	end
 end
 
--- Create sidebar tab function
 local function createTab(name, onClick)
 	local btn = Instance.new("TextButton", Sidebar)
 	btn.Size = UDim2.new(1, 0, 0, 40)
@@ -81,7 +79,6 @@ local function createTab(name, onClick)
 	btn.MouseButton1Click:Connect(onClick)
 end
 
--- Create button function
 local function createButton(text, callback)
 	local btn = Instance.new("TextButton", ContentFrame)
 	btn.Size = UDim2.new(0.9, 0, 0, 40)
@@ -95,7 +92,6 @@ local function createButton(text, callback)
 	btn.MouseButton1Click:Connect(callback)
 end
 
--- Create slider function
 local function createSlider(labelText, min, max, callback)
 	local label = Instance.new("TextLabel", ContentFrame)
 	label.Text = labelText
@@ -233,7 +229,7 @@ createTab("ESP", function()
 	end)
 end)
 
--- Misc
+-- Misc (Updated with Infinite Jump + God Mode)
 createTab("Misc", function()
 	clearContent()
 
@@ -257,6 +253,32 @@ createTab("Misc", function()
 					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 				end
 			end
+		end)
+	end)
+
+	createButton("Enable God Mode", function()
+		local function applyGodMode()
+			local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+			local humanoid = char:WaitForChild("Humanoid")
+
+			humanoid.Health = math.huge
+			humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+				if humanoid.Health < math.huge then
+					humanoid.Health = math.huge
+				end
+			end)
+
+			StarterGui:SetCore("SendNotification", {
+				Title = "SRZ HUB",
+				Text = "God Mode Enabled!",
+				Duration = 3
+			})
+		end
+
+		applyGodMode()
+		LocalPlayer.CharacterAdded:Connect(function()
+			wait(1)
+			applyGodMode()
 		end)
 	end)
 end)
@@ -324,5 +346,5 @@ createTab("Hump", function()
 	end)
 end)
 
--- Load main tab
+-- Load default tab
 Sidebar:GetChildren()[2].MouseButton1Click:Wait()
