@@ -181,6 +181,44 @@ createTab("Main", function()
 		mobileBtn.MouseButton1Click:Connect(toggleFly)
 	end)
 
+    -- *** AUTO PARRY IMPLEMENTATION START ***
+	local autoParryActive = false
+	local autoParryConnection
+
+	local function doParry()
+	    -- Placeholder for actual parry logic. Replace with your parry action.
+	    print("Parry triggered (placeholder)")
+	    -- Example: fire remote event or simulate key press here.
+	end
+
+	createButton("Toggle Auto Parry", function()
+	    autoParryActive = not autoParryActive
+	    if autoParryActive then
+	        autoParryConnection = RunService.Heartbeat:Connect(function()
+	            if autoParryActive then
+	                doParry()
+	                wait(0.5) -- parry cooldown
+	            end
+	        end)
+	        StarterGui:SetCore("SendNotification", {
+	            Title = "SRZ HUB",
+	            Text = "Auto Parry Enabled",
+	            Duration = 3,
+	        })
+	    else
+	        if autoParryConnection then
+	            autoParryConnection:Disconnect()
+	            autoParryConnection = nil
+	        end
+	        StarterGui:SetCore("SendNotification", {
+	            Title = "SRZ HUB",
+	            Text = "Auto Parry Disabled",
+	            Duration = 3,
+	        })
+	    end
+	end)
+    -- *** AUTO PARRY IMPLEMENTATION END ***
+
 	createSlider("WalkSpeed (20–200)", 20, 200, function(value)
 		speedValue = value
 		local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
