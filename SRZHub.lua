@@ -236,8 +236,28 @@ end)
 -- Misc
 createTab("Misc", function()
 	clearContent()
+
 	createButton("Rejoin Server", function()
 		TeleportService:Teleport(game.PlaceId, LocalPlayer)
+	end)
+
+	createButton("Enable Infinite Jump", function()
+		local enabled = true
+		StarterGui:SetCore("SendNotification", {
+			Title = "SRZ HUB",
+			Text = "Infinite Jump Enabled!",
+			Duration = 3
+		})
+
+		UserInputService.JumpRequest:Connect(function()
+			if enabled then
+				local char = LocalPlayer.Character
+				local humanoid = char and char:FindFirstChildWhichIsA("Humanoid")
+				if humanoid then
+					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+				end
+			end
+		end)
 	end)
 end)
 
