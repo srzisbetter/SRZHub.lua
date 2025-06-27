@@ -181,44 +181,6 @@ createTab("Main", function()
 		mobileBtn.MouseButton1Click:Connect(toggleFly)
 	end)
 
-    -- *** AUTO PARRY IMPLEMENTATION START ***
-	local autoParryActive = false
-	local autoParryConnection
-
-	local function doParry()
-	    -- Placeholder for actual parry logic. Replace with your parry action.
-	    print("Parry triggered (placeholder)")
-	    -- Example: fire remote event or simulate key press here.
-	end
-
-	createButton("Toggle Auto Parry", function()
-	    autoParryActive = not autoParryActive
-	    if autoParryActive then
-	        autoParryConnection = RunService.Heartbeat:Connect(function()
-	            if autoParryActive then
-	                doParry()
-	                wait(0.5) -- parry cooldown
-	            end
-	        end)
-	        StarterGui:SetCore("SendNotification", {
-	            Title = "SRZ HUB",
-	            Text = "Auto Parry Enabled",
-	            Duration = 3,
-	        })
-	    else
-	        if autoParryConnection then
-	            autoParryConnection:Disconnect()
-	            autoParryConnection = nil
-	        end
-	        StarterGui:SetCore("SendNotification", {
-	            Title = "SRZ HUB",
-	            Text = "Auto Parry Disabled",
-	            Duration = 3,
-	        })
-	    end
-	end)
-    -- *** AUTO PARRY IMPLEMENTATION END ***
-
 	createSlider("WalkSpeed (20–200)", 20, 200, function(value)
 		speedValue = value
 		local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
@@ -226,45 +188,68 @@ createTab("Main", function()
 	end)
 end)
 
--- ESP
+-- ESP with Enable and Disable buttons
 createTab("ESP", function()
 	clearContent()
 
-	createButton("Enable ESP", function()
-		local folder = Instance.new("Folder", game.CoreGui)
-		folder.Name = "ESPBoxes"
+	local espFolder
+	local espConnections = {}
+	local espEnabled = false
 
-		local function addESP(player)
-			if player == LocalPlayer then return end
-			local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-			if not hrp then return end
+	local function addESP(player)
+		if player == LocalPlayer then return end
+		local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
 
-			local esp = Instance.new("BillboardGui")
-			esp.Adornee = hrp
-			esp.Size = UDim2.new(4, 0, 5, 0)
-			esp.AlwaysOnTop = true
-			esp.LightInfluence = 0
+		local esp = Instance.new("BillboardGui")
+		esp.Adornee = hrp
+		esp.Size = UDim2.new(4, 0, 5, 0)
+		esp.AlwaysOnTop = true
+		esp.LightInfluence = 0
 
-			local box = Instance.new("Frame", esp)
-			box.Size = UDim2.new(1, 0, 1, 0)
-			box.BackgroundTransparency = 0.3
-			box.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-			box.BorderSizePixel = 0
+		local box = Instance.new("Frame", esp)
+		box.Size = UDim2.new(1, 0, 1, 0)
+		box.BackgroundTransparency = 0.3
+		box.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+		box.BorderSizePixel = 0
 
-			esp.Parent = folder
-		end
+		esp.Parent = espFolder
+	end
+
+	local function enableESP()
+		if espEnabled then return end
+		espEnabled = true
+
+		espFolder = Instance.new("Folder", game.CoreGui)
+		espFolder.Name = "ESPBoxes"
 
 		for _, p in ipairs(Players:GetPlayers()) do
 			addESP(p)
-		end
-
-		Players.PlayerAdded:Connect(function(player)
-			player.CharacterAdded:Connect(function()
+			local conn = p.CharacterAdded:Connect(function()
 				wait(1)
-				addESP(player)
+				addESP(p)
 			end)
-		end)
-	end)
+			table.insert(espConnections, conn)
+		end
+	end
+
+	local function disableESP()
+		if not espEnabled then return end
+		espEnabled = false
+
+		for _, conn in ipairs(espConnections) do
+			conn:Disconnect()
+		end
+		espConnections = {}
+
+		if espFolder then
+			espFolder:Destroy()
+			espFolder = nil
+		end
+	end
+
+	createButton("Enable ESP", enableESP)
+	createButton("Disable ESP", disableESP)
 end)
 
 -- Misc (Updated with Infinite Jump + God Mode)
@@ -294,15 +279,23 @@ createTab("Misc", function()
 		end)
 	end)
 
+	-- Improved God Mode with cleanup and stable health value
 	createButton("Enable God Mode", function()
+		local healthConn -- to store current connection
+
 		local function applyGodMode()
 			local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 			local humanoid = char:WaitForChild("Humanoid")
 
-			humanoid.Health = math.huge
-			humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-				if humanoid.Health < math.huge then
-					humanoid.Health = math.huge
+			humanoid.Health = 1e9 -- large stable number
+
+			if healthConn then
+				healthConn:Disconnect()
+			end
+
+			healthConn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+				if humanoid.Health < 1e9 then
+					humanoid.Health = 1e9
 				end
 			end)
 
@@ -314,6 +307,7 @@ createTab("Misc", function()
 		end
 
 		applyGodMode()
+
 		LocalPlayer.CharacterAdded:Connect(function()
 			wait(1)
 			applyGodMode()
@@ -369,12 +363,18 @@ createTab("Hump", function()
 			humpConn = RunService.RenderStepped:Connect(function()
 				if not humping then return end
 				local c = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-				local t = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+				local t = p.Character:FindFirstChild("HumanoidRootPart")
 				if c and t then
-					local offset = math.sin(tick() * speed) * 0.5
-					c.CFrame = t.CFrame * CFrame.new(0, 0, amplitude + offset)
+					local offset = Vector3.new(0, math.sin(tick() * speed) * amplitude, 0)
+					c.CFrame = t.CFrame * CFrame.new(offset)
 				end
 			end)
+		else
+			StarterGui:SetCore("SendNotification", {
+				Title = "SRZ HUB",
+				Text = "Player not found!",
+				Duration = 3
+			})
 		end
 	end)
 
@@ -384,5 +384,5 @@ createTab("Hump", function()
 	end)
 end)
 
--- Load default tab
-Sidebar:GetChildren()[2].MouseButton1Click:Wait()
+-- Initialize default tab
+Sidebar:GetChildren()[2].MouseButton1Click:Wait() -- Open first tab automatically
