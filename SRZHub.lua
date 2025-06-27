@@ -1,4 +1,5 @@
--- Delta Universal Script GUI (SRZ HUB)
+-- SRZ HUB - Updated Script
+-- Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
@@ -90,39 +91,9 @@ local function createButton(text, callback)
 	btn.MouseButton1Click:Connect(callback)
 end
 
-local function createSlider(labelText, min, max, callback)
-	local label = Instance.new("TextLabel", ContentFrame)
-	label.Text = labelText
-	label.Size = UDim2.new(0.9, 0, 0, 20)
-	label.Position = UDim2.new(0.05, 0, 0, #ContentFrame:GetChildren() * 45)
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.BackgroundTransparency = 1
-	label.TextXAlignment = Enum.TextXAlignment.Left
-
-	local slider = Instance.new("TextBox", ContentFrame)
-	slider.Size = UDim2.new(0.9, 0, 0, 30)
-	slider.Position = UDim2.new(0.05, 0, 0, #ContentFrame:GetChildren() * 45 + 20)
-	slider.BackgroundColor3 = Color3.fromRGB(0, 120, 130)
-	slider.Text = tostring(min)
-	slider.TextColor3 = Color3.new(1, 1, 1)
-	slider.Font = Enum.Font.SourceSans
-	slider.TextSize = 18
-	slider.BorderSizePixel = 0
-
-	slider.FocusLost:Connect(function()
-		local val = tonumber(slider.Text)
-		if val then
-			val = math.clamp(val, min, max)
-			slider.Text = tostring(val)
-			callback(val)
-		end
-	end)
-end
-
--- Fly & Speed
+-- Main Tab
 local flyActive = false
 local flySpeed = 50
-local speedValue = 50
 
 createTab("Main", function()
 	clearContent()
@@ -165,24 +136,11 @@ createTab("Main", function()
 				toggleFly()
 			end
 		end)
-
-		local mobileBtn = Instance.new("TextButton", ScreenGui)
-		mobileBtn.Size = UDim2.new(0, 100, 0, 40)
-		mobileBtn.Position = UDim2.new(1, -110, 1, -50)
-		mobileBtn.Text = "Fly"
-		mobileBtn.TextColor3 = Color3.new(1, 1, 1)
-		mobileBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 200)
-		mobileBtn.Font = Enum.Font.SourceSansBold
-		mobileBtn.TextSize = 20
-		mobileBtn.BorderSizePixel = 0
-		mobileBtn.Draggable = true
-		mobileBtn.MouseButton1Click:Connect(toggleFly)
 	end)
 
-	createSlider("WalkSpeed (20–200)", 20, 200, function(value)
-		speedValue = value
+	createButton("Walk Speed: 100", function()
 		local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
-		if hum then hum.WalkSpeed = value end
+		if hum then hum.WalkSpeed = 100 end
 	end)
 end)
 
@@ -196,7 +154,8 @@ createTab("ESP", function()
 
 	local function addESP(player)
 		if player == LocalPlayer then return end
-		local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local char = player.Character or player.CharacterAdded:Wait()
+		local hrp = char:WaitForChild("HumanoidRootPart", 3)
 		if not hrp then return end
 
 		local esp = Instance.new("BillboardGui")
@@ -208,7 +167,7 @@ createTab("ESP", function()
 		local box = Instance.new("Frame", esp)
 		box.Size = UDim2.new(1, 0, 1, 0)
 		box.BackgroundTransparency = 0.3
-		box.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+		box.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
 		box.BorderSizePixel = 0
 
 		esp.Parent = espFolder
@@ -224,7 +183,7 @@ createTab("ESP", function()
 		for _, p in ipairs(Players:GetPlayers()) do
 			addESP(p)
 			local conn = p.CharacterAdded:Connect(function()
-				wait(1)
+				task.wait(1)
 				addESP(p)
 			end)
 			table.insert(espConnections, conn)
@@ -259,77 +218,60 @@ createTab("Misc", function()
 	end)
 
 	createButton("Enable Infinite Jump", function()
-		local enabled = true
-		StarterGui:SetCore("SendNotification", {
-			Title = "SRZ HUB",
-			Text = "Infinite Jump Enabled!",
-			Duration = 3
-		})
-
 		UserInputService.JumpRequest:Connect(function()
-			if enabled then
-				local char = LocalPlayer.Character
-				local humanoid = char and char:FindFirstChildWhichIsA("Humanoid")
-				if humanoid then
-					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-				end
+			local char = LocalPlayer.Character
+			local humanoid = char and char:FindFirstChildWhichIsA("Humanoid")
+			if humanoid then
+				humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 			end
 		end)
 	end)
 
 	createButton("Enable God Mode", function()
-		local healthConn
-		local respawnConn
-
 		local function applyGodMode()
 			local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 			local humanoid = char:WaitForChild("Humanoid")
+			humanoid.MaxHealth = 1e9
 			humanoid.Health = 1e9
 
-			if healthConn then healthConn:Disconnect() end
-			healthConn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+			humanoid:GetPropertyChangedSignal("Health"):Connect(function()
 				if humanoid.Health < 1e9 then
 					humanoid.Health = 1e9
 				end
 			end)
-
-			StarterGui:SetCore("SendNotification", {
-				Title = "SRZ HUB",
-				Text = "God Mode Enabled!",
-				Duration = 3
-			})
 		end
 
-		applyGodMode()
-
-		if respawnConn then respawnConn:Disconnect() end
-		respawnConn = LocalPlayer.CharacterAdded:Connect(function()
-			wait(1)
+		LocalPlayer.CharacterAdded:Connect(function()
+			task.wait(1)
 			applyGodMode()
 		end)
+
+		applyGodMode()
 	end)
 end)
 
--- Socials Tab
+-- Socials
 createTab("Socials", function()
 	clearContent()
 	local function copyToClipboard(text)
 		setclipboard(text)
 		StarterGui:SetCore("SendNotification", {
-			Title = "SRZ HUB";
-			Text = "Copied to clipboard!";
-			Duration = 3;
+			Title = "SRZ HUB",
+			Text = "Copied to clipboard!",
+			Duration = 3
 		})
 	end
+
 	createButton("Copy Discord", function()
 		copyToClipboard("https://discord.gg/AUDBcJZWTn")
 	end)
+
 	createButton("Copy TikTok", function()
 		copyToClipboard("https://www.tiktok.com/@srzfv?_t=ZN-8xWFmviaWRC&_r=1")
 	end)
 end)
 
--- ✅ Optimized Hump Tab
+-- Hump Tab
 createTab("Hump", function()
 	clearContent()
 
@@ -347,34 +289,33 @@ createTab("Hump", function()
 	local humpConn
 
 	createButton("Start Humping", function()
-		local p = Players:FindFirstChild(nameBox.Text)
-		if p and p.Character then
-			humping = true
-			local amplitude = 0.6
-			local speed = 10
-
-			humpConn = RunService.Heartbeat:Connect(function()
-				if not humping then return end
-				local c = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-				local t = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-				if c and t then
-					local offset = math.sin(tick() * speed) * amplitude
-					local newCFrame = t.CFrame * CFrame.new(0, 0, 2 + offset)
-					c.CFrame = newCFrame
-				end
-				task.wait()
-			end)
-		else
+		local targetPlayer = Players:FindFirstChild(nameBox.Text)
+		if not targetPlayer or not targetPlayer.Character then
 			StarterGui:SetCore("SendNotification", {
 				Title = "SRZ HUB",
 				Text = "Player not found!",
 				Duration = 3
 			})
+			return
 		end
+
+		humping = true
+
+		humpConn = RunService.Heartbeat:Connect(function()
+			if not humping then return end
+			local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if myHRP and targetHRP then
+				myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 2 + math.sin(tick() * 10) * 0.5)
+			end
+		end)
 	end)
 
 	createButton("Stop Humping", function()
 		humping = false
-		if humpConn then humpConn:Disconnect() humpConn = nil end
+		if humpConn then
+			humpConn:Disconnect()
+			humpConn = nil
+		end
 	end)
 end)
