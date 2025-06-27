@@ -44,7 +44,6 @@ title.Font = Enum.Font.SourceSansBold
 title.TextSize = 22
 title.BorderSizePixel = 0
 
--- Sidebar
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.Position = UDim2.new(0, 0, 0, 30)
 Sidebar.Size = UDim2.new(0, 100, 1, -30)
@@ -54,7 +53,6 @@ Sidebar.BorderSizePixel = 0
 local UIList = Instance.new("UIListLayout", Sidebar)
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Content Frame
 local ContentFrame = Instance.new("Frame", MainFrame)
 ContentFrame.Position = UDim2.new(0, 100, 0, 30)
 ContentFrame.Size = UDim2.new(1, -100, 1, -30)
@@ -121,7 +119,7 @@ local function createSlider(labelText, min, max, callback)
 	end)
 end
 
--- Fly and Speed Logic
+-- Fly & Speed
 local flyActive = false
 local flySpeed = 50
 local speedValue = 50
@@ -188,7 +186,7 @@ createTab("Main", function()
 	end)
 end)
 
--- ESP with Enable and Disable buttons
+-- ESP Tab
 createTab("ESP", function()
 	clearContent()
 
@@ -252,7 +250,7 @@ createTab("ESP", function()
 	createButton("Disable ESP", disableESP)
 end)
 
--- Misc (Updated with Infinite Jump + God Mode)
+-- Misc Tab
 createTab("Misc", function()
 	clearContent()
 
@@ -279,20 +277,16 @@ createTab("Misc", function()
 		end)
 	end)
 
-	-- Improved God Mode with cleanup and stable health value
 	createButton("Enable God Mode", function()
-		local healthConn -- to store current connection
+		local healthConn
+		local respawnConn
 
 		local function applyGodMode()
 			local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 			local humanoid = char:WaitForChild("Humanoid")
+			humanoid.Health = 1e9
 
-			humanoid.Health = 1e9 -- large stable number
-
-			if healthConn then
-				healthConn:Disconnect()
-			end
-
+			if healthConn then healthConn:Disconnect() end
 			healthConn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
 				if humanoid.Health < 1e9 then
 					humanoid.Health = 1e9
@@ -308,17 +302,17 @@ createTab("Misc", function()
 
 		applyGodMode()
 
-		LocalPlayer.CharacterAdded:Connect(function()
+		if respawnConn then respawnConn:Disconnect() end
+		respawnConn = LocalPlayer.CharacterAdded:Connect(function()
 			wait(1)
 			applyGodMode()
 		end)
 	end)
 end)
 
--- Socials
+-- Socials Tab
 createTab("Socials", function()
 	clearContent()
-
 	local function copyToClipboard(text)
 		setclipboard(text)
 		StarterGui:SetCore("SendNotification", {
@@ -327,17 +321,15 @@ createTab("Socials", function()
 			Duration = 3;
 		})
 	end
-
 	createButton("Copy Discord", function()
 		copyToClipboard("https://discord.gg/AUDBcJZWTn")
 	end)
-
 	createButton("Copy TikTok", function()
 		copyToClipboard("https://www.tiktok.com/@srzfv?_t=ZN-8xWFmviaWRC&_r=1")
 	end)
 end)
 
--- Hump Feature
+-- ✅ Optimized Hump Tab
 createTab("Hump", function()
 	clearContent()
 
@@ -358,16 +350,19 @@ createTab("Hump", function()
 		local p = Players:FindFirstChild(nameBox.Text)
 		if p and p.Character then
 			humping = true
-			local amplitude = 1.5
-			local speed = 8
-			humpConn = RunService.RenderStepped:Connect(function()
+			local amplitude = 0.6
+			local speed = 10
+
+			humpConn = RunService.Heartbeat:Connect(function()
 				if not humping then return end
 				local c = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-				local t = p.Character:FindFirstChild("HumanoidRootPart")
+				local t = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
 				if c and t then
-					local offset = Vector3.new(0, math.sin(tick() * speed) * amplitude, 0)
-					c.CFrame = t.CFrame * CFrame.new(offset)
+					local offset = math.sin(tick() * speed) * amplitude
+					local newCFrame = t.CFrame * CFrame.new(0, 0, 2 + offset)
+					c.CFrame = newCFrame
 				end
+				task.wait()
 			end)
 		else
 			StarterGui:SetCore("SendNotification", {
@@ -380,9 +375,6 @@ createTab("Hump", function()
 
 	createButton("Stop Humping", function()
 		humping = false
-		if humpConn then humpConn:Disconnect() end
+		if humpConn then humpConn:Disconnect() humpConn = nil end
 	end)
 end)
-
--- Initialize default tab
-Sidebar:GetChildren()[2].MouseButton1Click:Wait() -- Open first tab automatically
